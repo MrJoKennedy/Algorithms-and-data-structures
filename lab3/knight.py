@@ -72,17 +72,37 @@ def print_board(board, path):
     print("    " + " ".join(f"{x + 1:>2}" for x in range(SIZE)))
 
 
+def has_repeats(path):
+    """True, если в маршруте какое-то поле встречается больше одного раза."""
+    return len(set(path)) != len(path)
+
+
 def main():
     board = [[0] * SIZE for _ in range(SIZE)]
 
     k = int(input("Количество занятых белыми фигурами полей: "))
-    for i in range(k):
+    i = 0
+    while i < k:
         x, y = read_cell(f"  Занятое поле №{i + 1} (X Y): ")
+        if board[x][y] == -1:  # проверка на повторение занятого поля
+            print(f"  Поле ({x + 1},{y + 1}) уже было введено, введите другое.")
+            continue
         board[x][y] = -1
+        i += 1
 
     start = read_cell("Поле коня (X1 Y1): ")
-    end = read_cell("Целевое поле (X2 Y2): ")
+    if board[start[0]][start[1]] == -1:
+        print("Предупреждение: стартовое поле было отмечено как занятое; "
+              "считаем, что на нём стоит сам конь.")
     board[start[0]][start[1]] = 0  # на стартовом поле стоит сам конь
+
+    end = read_cell("Целевое поле (X2 Y2): ")
+    if end == start:  # проверка на совпадение полей
+        print("\nКонь уже стоит на целевом поле: 0 ходов.")
+        return
+    if board[end[0]][end[1]] == -1:
+        print("Целевое поле занято белой фигурой, добраться невозможно.")
+        return
 
     moves, path = knight_path(board, start, end)
 
@@ -90,8 +110,14 @@ def main():
         print("Добраться до целевого поля невозможно.")
         return
 
+    # проверка маршрута на повторения полей
+    if has_repeats(path):
+        print("Ошибка: в маршруте есть повторяющиеся поля.")
+        return
+
     print(f"\nа) Минимальное количество ходов: {moves}")
     print("б) Маршрут:", " -> ".join(f"({x + 1},{y + 1})" for x, y in path))
+    print("Проверка: поля маршрута не повторяются.")
     print_board(board, path)
 
 
