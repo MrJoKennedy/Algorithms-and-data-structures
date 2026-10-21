@@ -1,3 +1,7 @@
+"""Доска 8x8. Занятое белыми фигурой или пешкой поле = 1, свободное = 0.
+Конь не может ходить на занятые поля. Поле, с которого конь стартует,
+считается занятым самим конём, поэтому в матрице там может стоять 1.
+Координаты (X, Y): X - номер столбца, Y - номер строки, оба от 1 до 8."""
 from collections import deque
 
 N = 8
@@ -5,31 +9,44 @@ MOVES = [(1, 2), (2, 1), (2, -1), (1, -2), (-1, -2), (-2, -1), (-2, 1), (-1, 2)]
 
 
 def knight_path(board, start, end):
-    """Возвращает маршрут [(x, y), ...] от start до end или None, если пути нет."""
-    (x1, y1), (x2, y2) = start, end
-    if board[y2 - 1][x2 - 1] == 1 and start != end:
+    """Динамическое программирование.
+
+    d[y][x] - минимальное число ходов коня от start до поля (x, y).
+    Рекуррентное соотношение:
+        d[start] = 0
+        d[c] = 1 + min(d[p]) по всем свободным полям p, из которых конь
+               за один ход попадает в c.
+    Таблицу пересчитываем, пока значения меняются; parent[c] хранит поле p,
+    на котором достигнут минимум (по нему восстанавливается маршрут).
+    Возвращает маршрут [(x, y), ...] или None, если пути нет.
+    """
+    if board[end[1] - 1][end[0] - 1] == 1 and start != end:
         return None                         # конечное поле занято своей фигурой
 
-    prev = {start: None}                    # откуда пришли в каждое поле
-    queue = deque([start])
-    while queue:
-        x, y = queue.popleft()
-        if (x, y) == end:
-            break
-        for dx, dy in MOVES:
-            nx, ny = x + dx, y + dy
-            if 1 <= nx <= N and 1 <= ny <= N \
-                    and board[ny - 1][nx - 1] == 0 and (nx, ny) not in prev:
-                prev[(nx, ny)] = (x, y)
-                queue.append((nx, ny))
+    INF = float("inf")
+    d = [[INF] * (N + 1) for _ in range(N + 1)]      # индексы 1..N
+    parent = {}
+    d[start[1]][start[0]] = 0
 
-    if end not in prev:
+    changed = True
+    while changed:
+        changed = False
+        for y in range(1, N + 1):
+            for x in range(1, N + 1):
+                if board[y - 1][x - 1] == 1 and (x, y) != start:
+                    continue                # занятое поле: туда ходить нельзя
+                for dx, dy in MOVES:
+                    px, py = x + dx, y + dy
+                    if 1 <= px <= N and 1 <= py <= N and d[py][px] + 1 < d[y][x]:
+                        d[y][x] = d[py][px] + 1
+                        parent[(x, y)] = (px, py)
+                        changed = True
+
+    if d[end[1]][end[0]] == INF:
         return None
-    path = []
-    cell = end
-    while cell is not None:                 # восстанавливаем путь с конца
-        path.append(cell)
-        cell = prev[cell]
+    path = [end]
+    while path[-1] != start:                # восстанавливаем путь с конца
+        path.append(parent[path[-1]])
     return path[::-1]
 
 
