@@ -1,108 +1,97 @@
-"""Доска 8x8. Занятое белыми фигурой или пешкой поле = 1, свободное = 0.
-Конь не может ходить на занятые поля. Поле, с которого конь стартует,
-считается занятым самим конём, поэтому в матрице там может стоять 1.
-Координаты (X, Y): X - номер столбца, Y - номер строки, оба от 1 до 8."""
-from collections import deque
-
-N = 8
+SIZE = 8
 MOVES = [(1, 2), (2, 1), (2, -1), (1, -2), (-1, -2), (-2, -1), (-2, 1), (-1, 2)]
 
 
 def knight_path(board, start, end):
-    """Динамическое программирование.
-
-    d[y][x] - минимальное число ходов коня от start до поля (x, y).
-    Рекуррентное соотношение:
-        d[start] = 0
-        d[c] = 1 + min(d[p]) по всем свободным полям p, из которых конь
-               за один ход попадает в c.
-    Таблицу пересчитываем, пока значения меняются; parent[c] хранит поле p,
-    на котором достигнут минимум (по нему восстанавливается маршрут).
-    Возвращает маршрут [(x, y), ...] или None, если пути нет.
-    """
-    if board[end[1] - 1][end[0] - 1] == 1 and start != end:
-        return None                         # конечное поле занято своей фигурой
 
     INF = float("inf")
-    d = [[INF] * (N + 1) for _ in range(N + 1)]      # индексы 1..N
-    parent = {}
-    d[start[1]][start[0]] = 0
+    f = [[INF] * SIZE for _ in range(SIZE)]
+    f[start[0]][start[1]] = 0
 
     changed = True
     while changed:
         changed = False
-        for y in range(1, N + 1):
-            for x in range(1, N + 1):
-                if board[y - 1][x - 1] == 1 and (x, y) != start:
-                    continue                # занятое поле: туда ходить нельзя
+        for x in range(SIZE):
+            for y in range(SIZE):
+                if board[x][y] == -1:
+                    continue
                 for dx, dy in MOVES:
-                    px, py = x + dx, y + dy
-                    if 1 <= px <= N and 1 <= py <= N and d[py][px] + 1 < d[y][x]:
-                        d[y][x] = d[py][px] + 1
-                        parent[(x, y)] = (px, py)
+                    p, q = x + dx, y + dy
+                    if 0 <= p < SIZE and 0 <= q < SIZE and board[p][q] != -1 \
+                            and f[p][q] + 1 < f[x][y]:
+                        f[x][y] = f[p][q] + 1
                         changed = True
 
-    if d[end[1]][end[0]] == INF:
-        return None
+    ex, ey = end
+    if f[ex][ey] == INF:
+        return None, None
+
+    # восстановление маршрута
     path = [end]
-    while path[-1] != start:                # восстанавливаем путь с конца
-        path.append(parent[path[-1]])
-    return path[::-1]
+    x, y = end
+    while (x, y) != start:
+        for dx, dy in MOVES:
+            p, q = x + dx, y + dy
+            if 0 <= p < SIZE and 0 <= q < SIZE and board[p][q] != -1 \
+                    and f[p][q] == f[x][y] - 1:
+                x, y = p, q
+                path.append((x, y))
+                break
+    path.reverse()
+    return f[ex][ey], path
 
 
-def read_board():
-    print("Введите доску: 8 строк по 8 цифр (1 - занято, 0 - свободно),")
-    print("строка 1 - первая строка доски. Цифры можно писать через пробел или слитно.")
-    board = []
-    while len(board) < N:
-        row = [int(c) for c in input(f"Строка {len(board) + 1}: ") if c in "01"]
-        if len(row) != N:
-            print("Нужно ровно 8 цифр (0 или 1), повторите ввод.")
-            continue
-        board.append(row)
-    return board
-
-
-def read_cell(name):
+def read_cell(prompt):
     while True:
         try:
-            x, y = map(int, input(f"{name} (X Y, от 1 до 8): ").split())
-            if 1 <= x <= N and 1 <= y <= N:
-                return x, y
+            x, y = map(int, input(prompt).split())
+            if 1 <= x <= SIZE and 1 <= y <= SIZE:
+                return x - 1, y - 1
         except ValueError:
             pass
         print("Введите два числа от 1 до 8 через пробел.")
 
 
 def print_board(board, path):
-    on_path = set(path)
-    print("\n  X: " + " ".join(str(i) for i in range(1, N + 1)))
-    for y in range(N):
-        line = []
-        for x in range(N):
-            if (x + 1, y + 1) == path[0]:
-                line.append("S")            # старт
-            elif (x + 1, y + 1) == path[-1]:
-                line.append("F")            # финиш
-            elif (x + 1, y + 1) in on_path:
-                line.append("*")            # промежуточное поле маршрута
+    on_path = {c: i for i, c in enumerate(path)}
+    print("\nДоска (K - старт, F - финиш, цифры - номер хода, # - занято, . - свободно):")
+    for y in range(SIZE - 1, -1, -1):
+        row = []
+        for x in range(SIZE):
+            if (x, y) == path[0]:
+                row.append("K")
+            elif (x, y) == path[-1]:
+                row.append("F")
+            elif (x, y) in on_path:
+                row.append(str(on_path[(x, y)]))
+            elif board[x][y] == -1:
+                row.append("#")
             else:
-                line.append("#" if board[y][x] else ".")
-        print(f"Y{y + 1}:  " + " ".join(line))
-    print("S - старт, F - финиш, * - маршрут, # - занято, . - свободно")
+                row.append(".")
+        print(f"{y + 1} | " + " ".join(f"{c:>2}" for c in row))
+    print("    " + " ".join(f"{x + 1:>2}" for x in range(SIZE)))
 
 
 def main():
-    board = read_board()
-    start = read_cell("Начальное поле (X1, Y1)")
-    end = read_cell("Конечное поле (X2, Y2)")
+    board = [[0] * SIZE for _ in range(SIZE)]
 
-    path = knight_path(board, start, end)
-    if path is None:
-        print("\nКонь не может добраться до этого поля.")
+    k = int(input("Количество занятых белыми фигурами полей: "))
+    for i in range(k):
+        x, y = read_cell(f"  Занятое поле №{i + 1} (X Y): ")
+        board[x][y] = -1
+
+    start = read_cell("Поле коня (X1 Y1): ")
+    end = read_cell("Целевое поле (X2 Y2): ")
+    board[start[0]][start[1]] = 0  # на стартовом поле стоит сам конь
+
+    moves, path = knight_path(board, start, end)
+
+    if moves is None:
+        print("Добраться до целевого поля невозможно.")
         return
-    print(f"\nа) Минимальное количество ходов: {len(path) - 1}")
-    print("б) Маршрут: " + " -> ".join(f"({x},{y})" for x, y in path))
+
+    print(f"\nа) Минимальное количество ходов: {moves}")
+    print("б) Маршрут:", " -> ".join(f"({x + 1},{y + 1})" for x, y in path))
     print_board(board, path)
 
 
