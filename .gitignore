@@ -1,0 +1,30 @@
+# macOS System Files
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+._*
+.Spotlight-V100
+.Trashes
+
+# C# / .NET / Visual Studio
+[Bb]in/
+[Oo]bj/
+[Dd]ebug/
+[Rr]elease/
+x64/
+[Tt]est[Rr]esult*/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# JetBrains Rider & VS Code
+.idea/
+.vscode/
+_ReSharper*/
+*.rsuser
+
+# NuGet Packages
+*.nupkg
+[Pp]ackages/
